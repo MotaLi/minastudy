@@ -6,6 +6,7 @@ import java.nio.charset.Charset;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import javax.swing.JDialog;
 
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.service.IoAcceptor;
@@ -18,6 +19,8 @@ import org.apache.mina.transport.socket.DatagramSessionConfig;
 import org.apache.mina.transport.socket.nio.NioDatagramAcceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.sun.jdmk.comm.HtmlAdaptorServer;
 
 public class MinaUdpServer extends IoHandlerAdapter {
 	private final static Logger log = LoggerFactory
@@ -79,13 +82,27 @@ public class MinaUdpServer extends IoHandlerAdapter {
 	}
 	
 	public void registerObject(IoAcceptor acceptor) throws Exception {
-		MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();		
+		MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+		// 创建MBean
 		IoServiceMBean acceptorMBean = new IoServiceMBean(acceptor);
 		ObjectName acceptorName = new ObjectName(acceptor.getClass()
 				.getPackage().getName()
 				+ ": type=IOAccepotr, Name = "
 				+ acceptor.getClass().getSimpleName());
+		// 将MBean注册到MBeanServer中
 		mbs.registerMBean(acceptorMBean, acceptorName);
+		
+        //创建适配器，用于能够通过浏览器访问MBean (http://localhost:9797)
+        HtmlAdaptorServer adapter = new HtmlAdaptorServer();
+        adapter.setPort(9797);
+        mbs.registerMBean(adapter, new ObjectName(
+                    "MyappMBean:name=htmladapter,port=9797"));
+        adapter.start();      
+
+        //由于是为了演示保持程序处于运行状态，创建一个图形窗口
+        javax.swing.JDialog dialog = new JDialog();
+        dialog.setName("jmx test");
+        dialog.setVisible(true);
 	}
 
 	public MinaUdpServer() throws Exception {
